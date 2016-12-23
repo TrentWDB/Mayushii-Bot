@@ -46,28 +46,16 @@ public class TuturuListener {
 
             this.audioPaths.add(path);
         }
-
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            public void run() {
-                System.out.println("Bye bye!");
-                sendMessageToPrimaryChannel("Bye bye!");
-                try {
-                    Thread.sleep(1000L);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }));
     }
 
     @EventSubscriber
     public void onReady(ReadyEvent event) {
         System.out.println("Tuturu bot is now ready!");
-        sendMessageToPrimaryChannel("Tuturu!");
+        // sendMessageToPrimaryChannel("Tuturu!");
     }
 
     @EventSubscriber
-    public void onMessage(MessageReceivedEvent event) throws RateLimitException, DiscordException, MissingPermissionsException {
+    public void onMessage(MessageReceivedEvent event) throws RateLimitException, DiscordException, MissingPermissionsException, IOException {
         IMessage discordMessage = event.getMessage();
         IUser user = discordMessage.getAuthor();
         if (user.isBot()) {
@@ -77,6 +65,11 @@ public class TuturuListener {
         IChannel channel = discordMessage.getChannel();
         IVoiceChannel voiceChannel = user.getConnectedVoiceChannels().size() == 0 ? null : user.getConnectedVoiceChannels().get(0);
         IGuild guild = discordMessage.getGuild();
+        if (guild == null) {
+            // if it's a private message then get the users guild
+            guild = getGuild(channel);
+        }
+
         String message = discordMessage.getContent().toLowerCase().trim().replaceAll("\\s+", " ");
         String[] split = message.split(" ");
 
@@ -147,6 +140,14 @@ public class TuturuListener {
                 break;
             }
 
+            case "bye": {
+                if (hasAdministratorPermissions(user, guild)) {
+                    quit();
+                }
+
+                break;
+            }
+
             default: {
                 // use the command as the argument
                 if (queue(channel, command)) {
@@ -160,7 +161,7 @@ public class TuturuListener {
         }
     }
 
-    private boolean queue(IChannel channel, String args) throws RateLimitException, DiscordException, MissingPermissionsException {
+    private boolean queue(IChannel channel, String args) throws RateLimitException, DiscordException, MissingPermissionsException, IOException {
         if (args.startsWith("http") || args.startsWith("https") || args.startsWith("www")) {
             // url
             try {
@@ -174,17 +175,18 @@ public class TuturuListener {
             for (String path : audioPaths) {
                 for (String extension : AUDIO_EXTENSIONS) {
                     String address = path + args + extension;
+                    File file = new File(address);
+                    if (!validScope(file, channel)) {
+                        return false;
+                    }
 
-                    if (new File(address).exists()) {
+                    if (file.exists()) {
                         try {
                             queueFile(channel, address);
-                            System.out.println("queued file");
                             return true;
                         } catch (IOException e) {
-                            System.out.println("error 1");
                             return false;
                         } catch (UnsupportedAudioFileException e) {
-                            System.out.println("error 2");
                             return false;
                         }
                     }
@@ -195,11 +197,15 @@ public class TuturuListener {
         return false;
     }
 
-    private boolean tuturu(IChannel channel, String args) throws RateLimitException, DiscordException, MissingPermissionsException {
+    private boolean tuturu(IChannel channel, String args) throws RateLimitException, DiscordException, MissingPermissionsException, IOException {
         for (String extension : AUDIO_EXTENSIONS) {
             String address = "tuturus/tuturu" + (args.length() > 0 ? "-" : "") + args + extension;
+            File file = new File(address);
+            if (!validScope(file, channel)) {
+                return false;
+            }
 
-            if (new File(address).exists()) {
+            if (file.exists()) {
                 try {
                     queueFile(channel, address);
                     return true;
@@ -285,7 +291,7 @@ public class TuturuListener {
     private void queueUrl(IChannel channel, String url) throws RateLimitException, DiscordException, MissingPermissionsException, IOException, UnsupportedAudioFileException {
         try {
             URL u = new URL(url);
-            setTrackTitle(getPlayer(channel.getGuild()).queue(u), u.getFile());
+            setTrackTitle(getPlayer(getGuild(channel)).queue(u), u.getFile());
         } catch (MalformedURLException e) {
             sendMessage(channel, "That URL is invalid!");
             throw e;
@@ -300,22 +306,6 @@ public class TuturuListener {
 
     private void queueFile(IChannel channel, String file) throws RateLimitException, DiscordException, MissingPermissionsException, IOException, UnsupportedAudioFileException {
         File f = new File(file);
-        String absoluteFilePath = f.getCanonicalPath().toLowerCase();
-
-        boolean foundParentPath = false;
-        for (String path : audioPaths) {
-            String absoluteValidPath = new File(path).getCanonicalPath().toLowerCase();
-
-            if (absoluteFilePath.startsWith(absoluteValidPath)) {
-                foundParentPath = true;
-                break;
-            }
-        }
-
-        if (!foundParentPath) {
-            sendMessage(channel, "That file location is out of the allowed scope!");
-            throw new IOException();
-        }
 
         if (!f.exists()) {
             sendMessage(channel, "That file doesn't exist!");
@@ -328,7 +318,7 @@ public class TuturuListener {
         }
 
         try {
-            setTrackTitle(getPlayer(channel.getGuild()).queue(f), f.toString());
+            setTrackTitle(getPlayer(getGuild(channel)).queue(f), f.toString());
         } catch (IOException e) {
             sendMessage(channel, "An IO exception occured: " + e.getMessage());
             throw e;
@@ -339,11 +329,11 @@ public class TuturuListener {
     }
 
     private void pause(IChannel channel, boolean pause) {
-        getPlayer(channel.getGuild()).setPaused(pause);
+        getPlayer(getGuild(channel)).setPaused(pause);
     }
 
     private void skip(IChannel channel) {
-        getPlayer(channel.getGuild()).skip();
+        getPlayer(getGuild(channel)).skip();
     }
 
     private void volume(IChannel channel, int percent) throws RateLimitException, DiscordException, MissingPermissionsException {
@@ -357,7 +347,7 @@ public class TuturuListener {
         if (vol < 0) {
             vol = 0f;
         }
-        getPlayer(channel.getGuild()).setVolume(vol);
+        getPlayer(getGuild(channel)).setVolume(vol);
         sendMessage(channel, "Set volume to **" + (int) (vol * 100) + "%**.");
     }
 
@@ -390,9 +380,21 @@ public class TuturuListener {
     }
 
     private void sendMessageToPrimaryChannel(String message) {
-        // try to send to general
-        for (IChannel channel : client.getChannels()) {
-            if (channel.getName().toLowerCase().equals("general")) {
+        for (IGuild guild : client.getGuilds()) {
+            // try to send to general
+            for (IChannel channel : guild.getChannels()) {
+                if (channel.getName().toLowerCase().equals("general")) {
+                    try {
+                        channel.sendMessage(message);
+
+                    } catch (MissingPermissionsException | RateLimitException | DiscordException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            // send to any willing channel tbh fam
+            for (IChannel channel : client.getChannels()) {
                 try {
                     channel.sendMessage(message);
                     return;
@@ -401,15 +403,94 @@ public class TuturuListener {
                 }
             }
         }
+    }
 
-        // send to any willing channel tbh fam
-        for (IChannel channel : client.getChannels()) {
-            try {
-                channel.sendMessage(message);
-                return;
-            } catch (MissingPermissionsException | RateLimitException | DiscordException e) {
-                e.printStackTrace();
+    private IGuild getGuild(IChannel channel) {
+        IGuild returnGuild = channel.getGuild();
+        if (returnGuild != null) {
+            return returnGuild;
+        }
+
+        if (channel.getUsersHere().size() > 1) {
+            return null;
+        }
+
+        // we can assume it's a private message to the bot
+        // first check voice channels
+        IUser user = channel.getUsersHere().get(0);
+        for (IGuild currentGuild : client.getGuilds()) {
+            for (IVoiceChannel currentVoiceChannel : currentGuild.getVoiceChannels()) {
+                if (currentVoiceChannel.getUsersHere().contains(user)) {
+                    return currentGuild;
+                }
             }
         }
+
+        // now we just check guilds, hopefully the user only exists in one
+        int foundCount = 0;
+        IGuild foundGuild = null;
+        for (IGuild currentGuild : client.getGuilds()) {
+            if (currentGuild.getUsers().contains(user)) {
+                foundCount++;
+                foundGuild = currentGuild;
+            }
+        }
+        if (foundCount == 1) {
+            return foundGuild;
+        }
+
+        // now we give up
+        return null;
+    }
+
+    private boolean hasAdministratorPermissions(IUser user, IGuild guild) {
+        if (guild.getOwner().equals(user)) {
+            return true;
+        }
+
+        if (user.getPermissionsForGuild(guild).contains(Permissions.ADMINISTRATOR)) {
+            return true;
+        }
+
+        // TODO I'm not sure it ever goes past user.getPermissionsForGuild but I haven't checked yet
+        List<IRole> roleList = user.getRolesForGuild(guild);
+        for (IRole role : roleList) {
+            if (role.getPermissions().contains(Permissions.ADMINISTRATOR)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean validScope(File file) throws IOException {
+        return validScope(file, null);
+    }
+
+    private boolean validScope(File file, IChannel channel) throws IOException {
+        String absoluteFilePath = file.getCanonicalPath().toLowerCase();
+
+        boolean foundParentPath = false;
+        for (String path : audioPaths) {
+            String absoluteValidPath = new File(path).getCanonicalPath().toLowerCase();
+
+            if (absoluteFilePath.startsWith(absoluteValidPath)) {
+                foundParentPath = true;
+                break;
+            }
+        }
+
+        if (!foundParentPath && channel != null) {
+            sendMessage(channel, "That file location is out of the allowed scope!");
+        }
+
+        return foundParentPath;
+    }
+
+    private void quit() throws DiscordException {
+        // sendMessageToPrimaryChannel("Bye bye!");
+        client.logout();
+
+        System.exit(0);
     }
 }
