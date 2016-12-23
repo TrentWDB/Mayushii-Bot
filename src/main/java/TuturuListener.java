@@ -149,13 +149,6 @@ public class TuturuListener {
 
             default: {
                 // use the command as the argument
-                if (tuturu(channel, command)) {
-                    if (!inRequestedChannel(voiceChannel)) {
-                        join(channel, user);
-                    }
-
-                    break;
-                }
 
                 if (queue(channel, command)) {
                     if (!inRequestedChannel(voiceChannel)) {
