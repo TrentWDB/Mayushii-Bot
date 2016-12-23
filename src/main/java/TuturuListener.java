@@ -149,7 +149,6 @@ public class TuturuListener {
 
             default: {
                 // use the command as the argument
-
                 if (queue(channel, command)) {
                     if (!inRequestedChannel(voiceChannel)) {
                         join(channel, user);
