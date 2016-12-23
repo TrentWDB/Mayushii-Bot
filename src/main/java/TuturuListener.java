@@ -16,28 +16,54 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Paths;
+import java.util.*;
 
 /**
  * Created by Trent on 12/21/2016.
  */
 public class TuturuListener {
     private static final String PREFIX = "?";
+    private static final String[] AUDIO_EXTENSIONS = new String[]{".wav", ".mp3", ""};
+    private static final boolean DEBUG = true;
+
     // this value is supposed to be channel.getUserLimit() but it's returning 0
     private static final int CHANNEL_LIMIT = 1000;
     private final Map<IGuild, IChannel> lastChannel = new HashMap<IGuild, IChannel>();
     private IDiscordClient client;
 
+    private final List<String> audioPaths = new ArrayList<String>();
 
-    public TuturuListener(IDiscordClient client) {
+    public TuturuListener(IDiscordClient client, String[] audioPaths) {
         this.client = client;
+        this.audioPaths.add("");
+        for (String path : audioPaths) {
+            path = path.trim();
+            String lastCharacter = path.substring(path.length() - 1);
+            if (!lastCharacter.equals("/") && !lastCharacter.equals("\\")) {
+                path += "/";
+            }
+
+            this.audioPaths.add(path);
+        }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                System.out.println("Bye bye!");
+                sendMessageToPrimaryChannel("Bye bye!");
+                try {
+                    Thread.sleep(1000L);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }));
     }
 
     @EventSubscriber
     public void onReady(ReadyEvent event) {
         System.out.println("Tuturu bot is now ready!");
+        sendMessageToPrimaryChannel("Tuturu!");
     }
 
     @EventSubscriber
@@ -49,10 +75,10 @@ public class TuturuListener {
         }
 
         IChannel channel = discordMessage.getChannel();
+        IVoiceChannel voiceChannel = user.getConnectedVoiceChannels().size() == 0 ? null : user.getConnectedVoiceChannels().get(0);
         IGuild guild = discordMessage.getGuild();
-        String message = discordMessage.getContent().toLowerCase().replaceAll("\\s+", " ");
+        String message = discordMessage.getContent().toLowerCase().trim().replaceAll("\\s+", " ");
         String[] split = message.split(" ");
-        System.out.println("Message: " + message);
 
         if (split.length < 1 || !split[0].startsWith(PREFIX)) {
             return;
@@ -61,35 +87,139 @@ public class TuturuListener {
         lastChannel.put(guild, channel);
 
         String command = split[0].substring(1);
-        String[] args = split.length >= 2 ? Arrays.copyOfRange(split, 1, split.length) : new String[0];
+        String[] commandParts = split.length >= 2 ? Arrays.copyOfRange(split, 1, split.length) : new String[0];
+        String args = String.join(" ", commandParts);
 
-        if (command.equalsIgnoreCase("join")) {
-            join(channel, user);
-        } else if (command.equalsIgnoreCase("queue")) {
-            String address = String.join(" ", args);
+        switch (command) {
+            case "join": {
+                join(channel, user);
 
-            if (new File(address).exists()) {
-                // file
-                queueFile(channel, address);
-                System.out.println("Queueing file");
-            } else {
-                // url
-                queueUrl(channel, address);
+                break;
             }
-        } else if (command.equalsIgnoreCase("play") || command.equalsIgnoreCase("unpause")) {
-            pause(channel, false);
-        } else if (command.equalsIgnoreCase("pause")) {
-            if (getPlayer(guild).isPaused()) pause(channel, false);
-            else pause(channel, true);
-        } else if (command.equalsIgnoreCase("skip")) {
-            skip(channel);
-        } else if (command.equalsIgnoreCase("vol") || command.equalsIgnoreCase("volume")) {
-            try {
-                volume(channel, Integer.parseInt(args[0]));
-            } catch (NumberFormatException e) {
-                channel.sendMessage("Invalid volume percentage.");
+
+            case "queue": {
+                queue(channel, args);
+
+                break;
+            }
+
+            case "tuturu": {
+                if (tuturu(channel, args) && !inRequestedChannel(voiceChannel)) {
+                    join(channel, user);
+                }
+
+                break;
+            }
+
+            case "play": {
+                if (queue(channel, args) && !inRequestedChannel(voiceChannel)) {
+                    join(channel, user);
+                }
+
+                break;
+            }
+
+            case "pause": {
+                pause(channel, true);
+
+                break;
+            }
+
+            case "unpause": {
+                pause(channel, true);
+
+                break;
+            }
+
+            case "skip": {
+                skip(channel);
+
+                break;
+            }
+
+            case "volume": {
+                try {
+                    volume(channel, Integer.parseInt(commandParts[0]));
+                } catch (NumberFormatException e) {
+                    sendMessage(channel, "Invalid volume percentage.");
+                }
+
+                break;
+            }
+
+            default: {
+                // use the command as the argument
+                if (tuturu(channel, command)) {
+                    if (!inRequestedChannel(voiceChannel)) {
+                        join(channel, user);
+                    }
+
+                    break;
+                }
+
+                if (queue(channel, command)) {
+                    if (!inRequestedChannel(voiceChannel)) {
+                        join(channel, user);
+                    }
+
+                    break;
+                }
             }
         }
+    }
+
+    private boolean queue(IChannel channel, String args) throws RateLimitException, DiscordException, MissingPermissionsException {
+        if (args.startsWith("http") || args.startsWith("https") || args.startsWith("www")) {
+            // url
+            try {
+                queueUrl(channel, args);
+                return true;
+            } catch (IOException | UnsupportedAudioFileException e) {
+                return false;
+            }
+        } else {
+            // file
+            for (String path : audioPaths) {
+                for (String extension : AUDIO_EXTENSIONS) {
+                    String address = path + args + extension;
+
+                    if (new File(address).exists()) {
+                        try {
+                            queueFile(channel, address);
+                            System.out.println("queued file");
+                            return true;
+                        } catch (IOException e) {
+                            System.out.println("error 1");
+                            return false;
+                        } catch (UnsupportedAudioFileException e) {
+                            System.out.println("error 2");
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private boolean tuturu(IChannel channel, String args) throws RateLimitException, DiscordException, MissingPermissionsException {
+        for (String extension : AUDIO_EXTENSIONS) {
+            String address = "tuturus/tuturu" + (args.length() > 0 ? "-" : "") + args + extension;
+
+            if (new File(address).exists()) {
+                try {
+                    queueFile(channel, address);
+                    return true;
+                } catch (IOException e) {
+                    return false;
+                } catch (UnsupportedAudioFileException e) {
+                    return false;
+                }
+            }
+        }
+
+        return false;
     }
 
 	/*
@@ -99,7 +229,6 @@ public class TuturuListener {
     @EventSubscriber
     public void onTrackQueue(TrackQueueEvent event) throws RateLimitException, DiscordException, MissingPermissionsException {
         IGuild guild = event.getPlayer().getGuild();
-        System.out.println(lastChannel.get(guild).getName());
         lastChannel.get(guild).sendMessage("Added **" + getTrackTitle(event.getTrack()) + "** to the playlist.");
     }
 
@@ -123,49 +252,97 @@ public class TuturuListener {
 	 */
 
     private void join(IChannel channel, IUser user) throws RateLimitException, DiscordException, MissingPermissionsException {
-        if (user.getConnectedVoiceChannels().size() < 1) {
-            channel.sendMessage("You aren't in a voice channel!");
-        } else {
-            IVoiceChannel voice = user.getConnectedVoiceChannels().get(0);
-            if (!voice.getModifiedPermissions(client.getOurUser()).contains(Permissions.VOICE_CONNECT)) {
-                channel.sendMessage("I can't join that voice channel!");
-            } else if (voice.getConnectedUsers().size() >= CHANNEL_LIMIT) {
-                channel.sendMessage("That room is full!");
+        // not in any channels, need to join one
+        if (client.getOurUser().getConnectedVoiceChannels().size() == 0) {
+            if (user.getConnectedVoiceChannels().size() < 1) {
+                sendMessage(channel, "You aren't in a voice channel!");
             } else {
-                voice.join();
-                channel.sendMessage("Connected to **" + voice.getName() + "**.");
+                IVoiceChannel voice = user.getConnectedVoiceChannels().get(0);
+                if (!voice.getModifiedPermissions(client.getOurUser()).contains(Permissions.VOICE_CONNECT)) {
+                    sendMessage(channel, "I can't join that voice channel!");
+                } else if (voice.getConnectedUsers().size() >= CHANNEL_LIMIT) {
+                    sendMessage(channel, "That channel is full!");
+                } else if (voice.getConnectedUsers().contains(client.getOurUser())) {
+                    sendMessage(channel, "I'm already in that channel!");
+                } else {
+                    voice.join();
+                    sendMessage(channel, "Connected to **" + voice.getName() + "**.");
+                }
             }
+        } else {
+            // already in a channel so can join a new one or stay
+            if (user.getConnectedVoiceChannels().size() == 0) {
+                // don't do anything, stay in current channel
+                return;
+            }
+
+            IVoiceChannel voice = user.getConnectedVoiceChannels().get(0);
+            voice.join();
+            sendMessage(channel, "Connected to **" + voice.getName() + "**.");
         }
     }
 
-    private void queueUrl(IChannel channel, String url) throws RateLimitException, DiscordException, MissingPermissionsException {
+    private boolean inRequestedChannel(IVoiceChannel channel) {
+        if (channel == null) {
+            return false;
+        }
+
+        return channel.getUsersHere().contains(client.getOurUser());
+    }
+
+    private void queueUrl(IChannel channel, String url) throws RateLimitException, DiscordException, MissingPermissionsException, IOException, UnsupportedAudioFileException {
         try {
             URL u = new URL(url);
             setTrackTitle(getPlayer(channel.getGuild()).queue(u), u.getFile());
-            System.out.println("Queued file " + url);
         } catch (MalformedURLException e) {
-            channel.sendMessage("That URL is invalid!");
+            sendMessage(channel, "That URL is invalid!");
+            throw e;
         } catch (IOException e) {
-            channel.sendMessage("An IO exception occured: " + e.getMessage());
+            sendMessage(channel, "An IO exception occured: " + e.getMessage());
+            throw e;
         } catch (UnsupportedAudioFileException e) {
-            channel.sendMessage("That type of file is not supported!");
+            sendMessage(channel, "That type of file is not supported!");
+            throw e;
         }
     }
 
-    private void queueFile(IChannel channel, String file) throws RateLimitException, DiscordException, MissingPermissionsException {
+    private void queueFile(IChannel channel, String file) throws RateLimitException, DiscordException, MissingPermissionsException, IOException, UnsupportedAudioFileException {
         File f = new File(file);
-        if (!f.exists())
-            channel.sendMessage("That file doesn't exist!");
-        else if (!f.canRead())
-            channel.sendMessage("I don't have access to that file!");
-        else {
-            try {
-                setTrackTitle(getPlayer(channel.getGuild()).queue(f), f.toString());
-            } catch (IOException e) {
-                channel.sendMessage("An IO exception occured: " + e.getMessage());
-            } catch (UnsupportedAudioFileException e) {
-                channel.sendMessage("That type of file is not supported!");
+        String absoluteFilePath = f.getCanonicalPath().toLowerCase();
+
+        boolean foundParentPath = false;
+        for (String path : audioPaths) {
+            String absoluteValidPath = new File(path).getCanonicalPath().toLowerCase();
+
+            if (absoluteFilePath.startsWith(absoluteValidPath)) {
+                foundParentPath = true;
+                break;
             }
+        }
+
+        if (!foundParentPath) {
+            sendMessage(channel, "That file location is out of the allowed scope!");
+            throw new IOException();
+        }
+
+        if (!f.exists()) {
+            sendMessage(channel, "That file doesn't exist!");
+            throw new IOException();
+        }
+
+        if (!f.canRead()) {
+            sendMessage(channel, "I don't have access to that file!");
+            throw new IOException();
+        }
+
+        try {
+            setTrackTitle(getPlayer(channel.getGuild()).queue(f), f.toString());
+        } catch (IOException e) {
+            sendMessage(channel, "An IO exception occured: " + e.getMessage());
+            throw e;
+        } catch (UnsupportedAudioFileException e) {
+            sendMessage(channel, "That type of file is not supported!");
+            throw e;
         }
     }
 
@@ -189,7 +366,7 @@ public class TuturuListener {
             vol = 0f;
         }
         getPlayer(channel.getGuild()).setVolume(vol);
-        channel.sendMessage("Set volume to **" + (int) (vol * 100) + "%**.");
+        sendMessage(channel, "Set volume to **" + (int) (vol * 100) + "%**.");
     }
 
 	/*
@@ -206,5 +383,41 @@ public class TuturuListener {
 
     private void setTrackTitle(AudioPlayer.Track track, String title) {
         track.getMetadata().put("title", title);
+    }
+
+    private void sendMessage(IChannel channel, String message) {
+        if (!DEBUG) {
+            return;
+        }
+
+        try {
+            channel.sendMessage(message);
+        } catch (MissingPermissionsException | RateLimitException | DiscordException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendMessageToPrimaryChannel(String message) {
+        // try to send to general
+        for (IChannel channel : client.getChannels()) {
+            if (channel.getName().toLowerCase().equals("general")) {
+                try {
+                    channel.sendMessage(message);
+                    return;
+                } catch (MissingPermissionsException | RateLimitException | DiscordException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        // send to any willing channel tbh fam
+        for (IChannel channel : client.getChannels()) {
+            try {
+                channel.sendMessage(message);
+                return;
+            } catch (MissingPermissionsException | RateLimitException | DiscordException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
