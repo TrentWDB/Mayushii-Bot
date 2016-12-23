@@ -2,15 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="202c6294-9ccf-4631-b4c7-7863d2833520" name="Default" comment="">
-      <change type="DELETED" beforePath="C:\Users\Trent\Dropbox\Java\Tuturu Bot\tuturu-duet.mp3" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Trent\Dropbox\Java\Tuturu Bot\tuturu-exhausted.mp3" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Trent\Dropbox\Java\Tuturu Bot\tuturu-frantic.mp3" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/target/classes/Tuturu.class" afterPath="$PROJECT_DIR$/target/classes/Tuturu.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/target/classes/TuturuListener.class" afterPath="$PROJECT_DIR$/target/classes/TuturuListener.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Tuturu Bot.iml" afterPath="$PROJECT_DIR$/Tuturu Bot.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/Tuturu.java" afterPath="$PROJECT_DIR$/src/main/java/Tuturu.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/TuturuListener.java" afterPath="$PROJECT_DIR$/src/main/java/TuturuListener.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/compiler.xml" afterPath="$PROJECT_DIR$/.idea/compiler.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/secret.txt" afterPath="$PROJECT_DIR$/secret.txt" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="Tuturu Bot.iws" />
@@ -44,10 +36,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Tuturu.java" pinned="false" current-in-tab="false">
+      <file leaf-file-name="Tuturu.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/Tuturu.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
+            <state vertical-scroll-proportion="0.46703297">
               <caret line="20" column="21" selection-start-line="20" selection-start-column="21" selection-end-line="20" selection-end-column="21" />
               <folding>
                 <element signature="imports" expanded="true" />
@@ -59,18 +51,18 @@
       <file leaf-file-name=".gitignore" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/.gitignore">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-0.0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <state vertical-scroll-proportion="-0.6296296">
+              <caret line="1" column="6" selection-start-line="1" selection-start-column="6" selection-end-line="1" selection-end-column="6" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="secret.txt" pinned="false" current-in-tab="true">
+      <file leaf-file-name="secret.txt" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/secret.txt">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+              <caret line="0" column="46" selection-start-line="0" selection-start-column="46" selection-end-line="0" selection-end-column="46" />
               <folding />
             </state>
           </provider>
@@ -686,29 +678,29 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/Tuturu.java">
+    <entry file="file://$PROJECT_DIR$/secret.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="20" column="21" selection-start-line="20" selection-start-column="21" selection-end-line="20" selection-end-column="21" />
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
+          <caret line="0" column="46" selection-start-line="0" selection-start-column="46" selection-end-line="0" selection-end-column="46" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/.gitignore">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        <state vertical-scroll-proportion="-0.6296296">
+          <caret line="1" column="6" selection-start-line="1" selection-start-column="6" selection-end-line="1" selection-end-column="6" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/secret.txt">
+    <entry file="file://$PROJECT_DIR$/src/main/java/Tuturu.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+        <state vertical-scroll-proportion="0.46703297">
+          <caret line="20" column="21" selection-start-line="20" selection-start-column="21" selection-end-line="20" selection-end-column="21" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
