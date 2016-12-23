@@ -23,6 +23,13 @@ public class Tuturu {
         client = new ClientBuilder().withToken(token).build();
         client.getDispatcher().registerListener(new TuturuListener(client, args));
         client.login();
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        client.changeUsername("Mayushii");
     }
 
     private static void loadSecret() throws IOException {
