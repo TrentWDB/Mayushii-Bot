@@ -15,6 +15,7 @@ import java.util.Properties;
  */
 public class Mayushii {
     private static final String PROPERTY_DISCORD_TOKEN = "discord_token";
+    private static final String PROPERTY_DISCORD_USERNAME = "discord_username";
     private static final String PROPERTY_GOOGLE_API_KEY = "google_api_key";
     private static final String PROPERTY_GOOGLE_SEARCH_ENGINE_ID = "google_search_engine_id";
 
@@ -36,6 +37,14 @@ public class Mayushii {
         disp.registerListener(new ImageSearchListener(googleKey, searchEngineId));
 
         client.login();
+
+        try {
+            Thread.sleep(5000);
+        } catch (Exception e) {
+            // no-op
+        }
+
+        client.changeUsername(properties.getProperty(PROPERTY_DISCORD_USERNAME));
     }
 
     private static void loadConfig() throws IOException {

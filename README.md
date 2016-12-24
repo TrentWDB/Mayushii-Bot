@@ -7,6 +7,7 @@
 
 
     discord_token=<bot api token>
+    discord_username=<bot username>
     google_api_key=<google API key for image search>
     google_search_engine_id=<custom search engine id for image search>
 
