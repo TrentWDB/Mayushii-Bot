@@ -3,7 +3,14 @@
 ### Project set up
 
 1. Import the project as a maven project.
-2. Create a folder called secret.txt in the project root directory. Inside this folder paste your bots secret key.
+2. Create a file called `mayushii.properties` in the project root directory with the following format:
+
+
+    discord_token=<bot api token>
+    google_api_key=<google API key for image search>
+    google_search_engine_id=<custom search engine id for image search>
+
+
 3. If you already have a (or a few) folders for a previous bot that contains all your audio files you can link it to this bot by running it with the path to the folder as a command line argument. e.g. java -jar mayushii-bot.jar "C:/Users/Admin/Dropbox/Discord Soundboard 1" "C:/Users/Admin/Dropbox/Discord Soundboard 2"
 
 ### Bot set up
